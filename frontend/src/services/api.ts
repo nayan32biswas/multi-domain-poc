@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL, SUBDOMAIN } from "../config";
 import type { Project } from "../types/project";
 
 const URLS = {
@@ -9,6 +9,7 @@ const URLS = {
 const commonHeaders = {
   "Content-Type": "application/json",
   Accept: "application/json",
+  "X-Subdomain": SUBDOMAIN,
 };
 
 const handleApiResponse = async (response: Response) => {
