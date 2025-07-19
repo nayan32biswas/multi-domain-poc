@@ -1,12 +1,17 @@
 from typing import Any
 
 from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 
 from app.config import DEBUG, LOCAL_SUBDOMAIN
 from app.services import get_project_by_subdomain
 
 
 def get_host_from_request(request: Request) -> str:
+    forwarded_host = request.headers.get("x-forwarded-host", "")
+    if forwarded_host:
+        return forwarded_host.split(":")[0].lower()
+
     return request.headers.get("host", "").split(":")[0].lower()
 
 
@@ -26,7 +31,6 @@ def get_subdomain_from_host(host: str) -> str | None:
 async def domain_middleware_utils(request: Request, call_next: Any) -> Any:
     host = get_host_from_request(request)
     subdomain = get_subdomain_from_host(host)
-    print(f"Host: {host}, Subdomain: {subdomain}")
     if not subdomain:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -35,9 +39,9 @@ async def domain_middleware_utils(request: Request, call_next: Any) -> Any:
 
     project = get_project_by_subdomain(subdomain)
     if not project:
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found for the given subdomain",
+            content={"detail": f"Project not found for the given host: {host}"},
         )
 
     request.state.project = project

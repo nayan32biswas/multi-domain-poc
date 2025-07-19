@@ -25,7 +25,6 @@ const ProjectUpdate: React.FC = () => {
         setLoading(true);
         setError(null);
         const projectData = await ApiService.getProject();
-        console.log("Fetched project data:", projectData);
         setProject(projectData);
         setFormData({
           title: projectData.title,

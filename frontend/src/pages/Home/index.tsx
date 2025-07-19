@@ -18,7 +18,6 @@ const Home: React.FC = () => {
         setLoading(true);
         setError(null);
         const projectData = await ApiService.getProject();
-        console.log("Fetched project data:", projectData);
         setProject(projectData);
       } catch (err) {
         setError("Failed to load project details. Please try again later.");
