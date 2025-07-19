@@ -1,0 +1,44 @@
+[project]
+name = "multi-domain-poc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.1",
+    "mongodb-odm>=1.0.2",
+    "pydantic>=2.11.7",
+    "pymongo>=4.13.2",
+    "uvicorn>=0.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.17.0",
+    "ruff>=0.12.4",
+]
+
+# Tool configurations
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ""
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+module = ""
+warn_unused_ignores = false
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "C4", "B", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["mongodb_odm", "pydantic", "fastapi"]
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
