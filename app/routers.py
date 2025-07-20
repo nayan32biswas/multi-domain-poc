@@ -31,10 +31,19 @@ def get_subdomain_from_request(request: Request) -> str | None:
     if DEBUG is True and subdomain == LOCAL_SUBDOMAIN:
         return LOCAL_SUBDOMAIN
     if not subdomain:
-        # Try to get from request state (set by middleware)
-        return getattr(request.state, 'subdomain', None)
+        return None
 
     return subdomain.lower()
+
+
+def get_custom_domain_from_request(request: Request) -> str | None:
+    custom_domain = request.headers.get("X-Custom-Domain")
+    if DEBUG is True and custom_domain == LOCAL_SUBDOMAIN:
+        return LOCAL_SUBDOMAIN
+    if not custom_domain:
+        return None
+
+    return custom_domain.lower()
 
 
 def get_project_from_request(request: Request) -> Project | None:
@@ -44,8 +53,8 @@ def get_project_from_request(request: Request) -> Project | None:
 
 @router.get("/projects")
 def get_projects(
-    subdomain: str = Depends(get_subdomain_from_request),
-    custom_domain: None | str = None,
+    subdomain: str| None = Depends(get_subdomain_from_request),
+    custom_domain: None | str = Depends(get_custom_domain_from_request),
 ) -> Any:
     filter: dict[str, str] = {}
     if subdomain:
@@ -72,8 +81,9 @@ def create_project(project_data: ProjectIn):
 def get_project(
     project_id: str,
     subdomain: str = Depends(get_subdomain_from_request),
+    custom_domain: str = Depends(get_custom_domain_from_request),
 ):
-    project = get_project_or_404(subdomain, project_id)
+    project = get_project_or_404(project_id, subdomain, custom_domain)
 
     return ProjectOut(**project.model_dump())
 
@@ -83,8 +93,9 @@ def update_project(
     project_data: ProjectIn,
     project_id: str,
     subdomain: str = Depends(get_subdomain_from_request),
+    custom_domain: str = Depends(get_custom_domain_from_request),
 ):
-    existing_project = get_project_or_404(subdomain, project_id)
+    existing_project = get_project_or_404(project_id, subdomain, custom_domain)
 
     existing_project = update_partially(existing_project, project_data)
     existing_project.update()
@@ -96,8 +107,9 @@ def update_project(
 def delete_project(
     project_id: str,
     subdomain: str = Depends(get_subdomain_from_request),
+    custom_domain: str = Depends(get_custom_domain_from_request),
 ):
-    project = get_project_or_404(subdomain, project_id)
+    project = get_project_or_404(project_id, subdomain, custom_domain)
     project.delete()
 
     return {"detail": "Project deleted successfully"}

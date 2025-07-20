@@ -9,10 +9,15 @@ from app.config import LOCAL_SUBDOMAIN, SITE_DOMAIN
 from app.models import Project
 
 
-def get_project_or_404(subdomain: str, project_id: str) -> Project:
-    existing_project = Project.find_one(
-        {"_id": ODMObjectId(project_id), "subdomain": subdomain}
-    )
+def get_project_or_404(project_id: str, subdomain: str|None, custom_domain: str|None) -> Project:
+    filter: dict[str, Any] = {"_id": ODMObjectId(project_id)}
+
+    if subdomain:
+        filter["subdomain"] = subdomain
+    if custom_domain:
+        filter["custom_domain"] = custom_domain
+
+    existing_project = Project.find_one(filter)
     if not existing_project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
