@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app import config, routers
 from app.middleware import domain_middleware_utils
@@ -9,7 +10,12 @@ from app.static_files import mount_static_files, serve_spa
 
 app: Any = FastAPI(debug=config.DEBUG, lifespan=config.lifespan)
 
-# Add CORS middleware first
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"],
+)
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.ALLOWED_HOSTS,

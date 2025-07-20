@@ -16,6 +16,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "long-long-long-secret-key")
 DB_URL = str(os.environ.get("DB_URL"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*")
+API_SUBDOMAIN = os.environ.get("API_SUBDOMAIN")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

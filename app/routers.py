@@ -1,8 +1,9 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 
+from app.config import DEBUG, LOCAL_SUBDOMAIN
 from app.models import Project
 from app.schemas import ProjectIn, ProjectOut
 from app.services import get_project_or_404
@@ -12,18 +13,21 @@ router = APIRouter(prefix="/api")
 logger = logging.getLogger(__name__)
 
 
-@router.get("/health")
-def health_check() -> Any:
-    return {"status": "ok"}
+def get_subdomain_from_request(request: Request) -> str | None:
+    subdomain = request.headers.get("X-Subdomain")
+    if DEBUG is True and subdomain == LOCAL_SUBDOMAIN:
+        return LOCAL_SUBDOMAIN
+    if not subdomain:
+        raise ValueError("Subdomain header is missing")
+
+    return subdomain.lower()
 
 
 @router.get("/projects")
 def get_projects(
-    request: Request,
-    subdomain: None | str = None,
+    subdomain: str = Depends(get_subdomain_from_request),
     custom_domain: None | str = None,
 ) -> Any:
-    print(f"project: {request.state.project}")
     filter: dict[str, str] = {}
     if subdomain:
         filter["subdomain"] = subdomain
@@ -46,19 +50,14 @@ def create_project(project_data: ProjectIn):
 
 
 @router.put("/projects/{project_id}")
-def update_project(project_data: ProjectIn, project_id: str):
-    existing_project = get_project_or_404(project_id)
+def update_project(
+    project_data: ProjectIn,
+    project_id: str,
+    subdomain: str = Depends(get_subdomain_from_request),
+):
+    existing_project = get_project_or_404(subdomain, project_id)
 
     existing_project = update_partially(existing_project, project_data)
     existing_project.update()
 
     return ProjectOut(**existing_project.model_dump())
-
-
-@router.delete("/projects/{project_id}")
-def delete_project(project_id: str):
-    existing_project = get_project_or_404(project_id)
-
-    existing_project.delete()
-
-    return {"message": "Project deleted successfully"}
