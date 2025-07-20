@@ -1,10 +1,6 @@
 import logging
 import os
-from contextlib import asynccontextmanager
 from pathlib import Path
-
-from fastapi import FastAPI
-from mongodb_odm import connect, disconnect
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +22,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 LOG_LEVEL = "INFO" if DEBUG is True else "INFO"
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore
-    connect(DB_URL)
-
-    yield
-
-    disconnect()

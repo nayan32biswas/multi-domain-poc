@@ -32,7 +32,7 @@ module = ""
 warn_unused_ignores = false
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "C4", "B", "UP"]

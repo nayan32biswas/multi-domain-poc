@@ -18,6 +18,10 @@ const getHost = () => {
     return host.slice(4);
   }
 
+  if (host.startsWith(DEV_SUBDOMAIN)) {
+    return DEV_SUBDOMAIN;
+  }
+
   return host;
 };
 
@@ -25,7 +29,7 @@ const getSubdomain = () => {
   const host = getHost();
   if (host === DEV_SUBDOMAIN) return DEV_SUBDOMAIN;
 
-  if (!host.includes(SITE_DOMAIN)) return "";
+  if (host.includes(SITE_DOMAIN)) return "";
 
   const domainParts = host.split(".");
 
@@ -35,5 +39,5 @@ const getSubdomain = () => {
   return domainParts[0];
 };
 
-export const CUSTOM_DOMAIN = getHost().toLocaleLowerCase();
-export const SUBDOMAIN = getSubdomain().toLocaleLowerCase();
+export const CUSTOM_DOMAIN = getHost().toLowerCase();
+export const SUBDOMAIN = getSubdomain().toLowerCase();
