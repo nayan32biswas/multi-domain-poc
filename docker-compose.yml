@@ -1,11 +1,3 @@
-# environment
-x-env-db: &env-volume
-  DEBUG: "True"
-  SECRET_KEY: "7974f0a8f44b9cf333f7ba9f3abe58f65e6ca41717eec253294c67a2088d762c"
-
-  DB_URL: "mongodb://root:password@db:27017/multi_domain?authSource=admin"
-  API_SUBDOMAIN: "customapi"
-
 services:
   server:
     build:
@@ -17,8 +9,7 @@ services:
     ports:
       - 8000:8000
       - 5678:5678
-    environment:
-      <<: *env-volume
+    env_file: .env
     volumes:
       - ./:/code
     depends_on:

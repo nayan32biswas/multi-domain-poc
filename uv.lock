@@ -105,6 +105,7 @@ name = "multi-domain-poc"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "dnspython" },
     { name = "fastapi" },
     { name = "mongodb-odm" },
     { name = "pydantic" },
@@ -120,6 +121,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dnspython", specifier = ">=2.7.0" },
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "mongodb-odm", specifier = ">=1.0.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.0" },
