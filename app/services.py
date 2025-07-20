@@ -106,7 +106,7 @@ def get_project_or_404(project_id: str, subdomain: str | None = None, custom_dom
 
     if subdomain:
         filter["subdomain"] = subdomain
-    if custom_domain:
+    elif custom_domain:
         filter["custom_domain"] = custom_domain
 
     existing_project = Project.find_one(filter)

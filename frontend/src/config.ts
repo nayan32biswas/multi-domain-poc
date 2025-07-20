@@ -39,5 +39,5 @@ const getSubdomain = () => {
   return domainParts[0];
 };
 
-export const CUSTOM_DOMAIN = getHost().toLowerCase();
-export const SUBDOMAIN = getSubdomain().toLowerCase();
+export const CUSTOM_DOMAIN = getHost();
+export const SUBDOMAIN = getSubdomain();

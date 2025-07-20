@@ -54,7 +54,7 @@ def get_projects(
     filter: dict[str, str] = {}
     if subdomain:
         filter["subdomain"] = subdomain
-    if custom_domain:
+    elif custom_domain:
         filter["custom_domain"] = custom_domain
 
     query = Project.find(filter)
