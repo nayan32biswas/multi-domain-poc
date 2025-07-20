@@ -29,7 +29,7 @@ const getSubdomain = () => {
   const host = getHost();
   if (host === DEV_SUBDOMAIN) return DEV_SUBDOMAIN;
 
-  if (host.includes(SITE_DOMAIN)) return "";
+  if (!host.includes(SITE_DOMAIN)) return "";
 
   const domainParts = host.split(".");
 
