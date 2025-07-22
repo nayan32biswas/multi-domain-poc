@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "dnspython>=2.7.0",
     "fastapi>=0.116.1",
     "mongodb-odm>=1.0.2",
     "pydantic>=2.11.7",
@@ -31,7 +32,7 @@ module = ""
 warn_unused_ignores = false
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "C4", "B", "UP"]

@@ -1,7 +1,14 @@
 # Multi Domain POC
 
+
 - `docker compose up server` Run the backend
 - `cd frontend && npm run dev` Run the frontend
+
+## Start For Production
+
+- `docker compose up --build frontend-builder` Build frontend.
+- `docker compose build server` Build the app image.
+- `docker compose up -d server static_server`
 
 ## Project Creation
 

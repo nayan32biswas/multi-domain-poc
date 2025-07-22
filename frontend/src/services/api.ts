@@ -1,4 +1,4 @@
-import { API_BASE_URL, SUBDOMAIN } from "../config";
+import { API_BASE_URL, SUBDOMAIN, CUSTOM_DOMAIN } from "../config";
 import type { Project } from "../types/project";
 
 const URLS = {
@@ -6,10 +6,21 @@ const URLS = {
   projectDetails: (id: string) => `${API_BASE_URL}/api/projects/${id}`,
 };
 
-const commonHeaders = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-  "X-Subdomain": SUBDOMAIN,
+const getHeaders = () => {
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  } as Record<string, string>;
+
+  if (SUBDOMAIN) {
+    headers["X-Subdomain"] = SUBDOMAIN;
+  }
+
+  if (CUSTOM_DOMAIN) {
+    headers["X-Custom-Domain"] = CUSTOM_DOMAIN;
+  }
+
+  return headers;
 };
 
 const handleApiResponse = async (response: Response) => {
@@ -41,7 +52,7 @@ export class ApiService {
     try {
       const response = await fetch(URLS.projects, {
         method: "GET",
-        headers: commonHeaders,
+        headers: getHeaders(),
       });
 
       const projects = await handleApiResponse(response);
@@ -61,7 +72,7 @@ export class ApiService {
     try {
       const response = await fetch(URLS.projectDetails(projectID), {
         method: "PUT",
-        headers: commonHeaders,
+        headers: getHeaders(),
         body: JSON.stringify(projectData),
       });
 
