@@ -1,6 +1,5 @@
 # Multi Domain POC
 
-
 - `docker compose up server` Run the backend
 - `cd frontend && npm run dev` Run the frontend
 
