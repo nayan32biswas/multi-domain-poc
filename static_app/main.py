@@ -19,7 +19,6 @@ DEBUG = bool(os.environ.get("DEBUG", False))
 DB_URL = str(os.environ.get("DB_URL"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*")
-API_SUBDOMAIN = str(os.environ.get("API_SUBDOMAIN"))
 SITE_DOMAIN = str(os.environ.get("SITE_DOMAIN"))
 
 LOCAL_SUBDOMAIN: str = "localhost"
