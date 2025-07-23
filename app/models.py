@@ -6,7 +6,7 @@ from mongodb_odm import ASCENDING, Document, Field, IndexModel
 class Project(Document):
     title: str = Field(required=True)
     description: str | None = Field(default=None)
-    subdomain: str | None = Field(default=None)
+    subdomain: str = Field(...)
     custom_domain: str | None = Field(default=None)
     domain_verification_token: str | None = Field(default=None)
     domain_verified_at: datetime | None = Field(default=None)

@@ -8,7 +8,7 @@ class ProjectOut(BaseModel):
     id: ObjectIdStr
     title: str
     description: str | None = None
-    subdomain: str | None = None
+    subdomain: str
     custom_domain: str | None = None
     domain_verification_token: str | None = None
     domain_verified_at: datetime | None = None
@@ -22,7 +22,7 @@ class ProjectOut(BaseModel):
 class ProjectIn(BaseModel):
     title: str
     description: str | None = None
-    subdomain: str | None = None
+    subdomain: str
     custom_domain: str | None = None
 
 

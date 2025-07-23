@@ -3,6 +3,6 @@
 set -e
 set -x
 
-# mypy app cli
-uv run --extra dev ruff check app cli
-uv run --extra dev ruff format app cli --check
+# mypy app static_app
+uv run --extra dev ruff check app static_app
+uv run --extra dev ruff format app static_app --check

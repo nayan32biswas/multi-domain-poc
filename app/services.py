@@ -1,5 +1,5 @@
-import secrets
 import re
+import secrets
 from datetime import datetime
 from typing import Any
 
@@ -26,7 +26,8 @@ Record Type: CNAME
 Name: www
 Value: {subdomain_host}
 
-After adding the record, it may take a few minutes to propagate. Then use the verification endpoint to complete the process.
+After adding the record, it may take a few minutes to propagate. \
+    Then use the verification endpoint to complete the process.
 
 Example DNS configuration:
 - If using cPanel: Go to Zone Editor, add TXT and CNAME records
@@ -79,7 +80,6 @@ reserved_subdomains = {
 }
 
 
-
 def get_sanitized_subdomain(subdomain: str | None) -> str | None:
     if not subdomain:
         return None
@@ -101,6 +101,21 @@ def get_sanitized_subdomain(subdomain: str | None) -> str | None:
     return subdomain
 
 
+def get_sanitized_custom_domain(custom_domain: str | None) -> str | None:
+    if not custom_domain:
+        return None
+
+    custom_domain = custom_domain.strip().lower()
+
+    if not validate_domain_format(custom_domain):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid custom domain format. Please provide a valid domain.",
+        )
+
+    return custom_domain
+
+
 def get_project_or_404(project_id: str, subdomain: str | None = None, custom_domain: str | None = None) -> Project:
     filter: dict[str, Any] = {"_id": ODMObjectId(project_id)}
 
@@ -114,6 +129,18 @@ def get_project_or_404(project_id: str, subdomain: str | None = None, custom_dom
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     return existing_project
+
+
+def is_subdomain_available(subdomain: str) -> bool:
+    existing_project = Project.find_one({"subdomain": subdomain})
+
+    return existing_project is None
+
+
+def is_customdomain_available(custom_domain: str) -> bool:
+    existing_project = Project.find_one({"custom_domain": custom_domain})
+
+    return existing_project is None
 
 
 def get_project_by_custom_domain(domain: str) -> Project | None:

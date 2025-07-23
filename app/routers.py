@@ -14,8 +14,11 @@ from app.schemas import (
 from app.services import (
     get_domain_verification_instructions,
     get_project_or_404,
+    get_sanitized_custom_domain,
     get_sanitized_subdomain,
     get_verification_record_name,
+    is_customdomain_available,
+    is_subdomain_available,
     remove_custom_domain,
     set_custom_domain,
     verify_custom_domain,
@@ -66,12 +69,28 @@ def get_projects(
 
 @router.post("/projects")
 def create_project(project_data: ProjectIn):
-    subdomain = get_sanitized_subdomain(project_data.subdomain)
     project_dict = project_data.model_dump()
 
+    subdomain = get_sanitized_subdomain(project_data.subdomain)
+    custom_domain = get_sanitized_custom_domain(project_data.custom_domain)
+
     project_dict["subdomain"] = subdomain
+    project_dict["custom_domain"] = custom_domain
+
+    if subdomain and not is_subdomain_available(subdomain):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Subdomain '{subdomain}' is already taken.",
+        )
+
+    if custom_domain and not is_customdomain_available(custom_domain):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Custom domain '{custom_domain}' is already taken.",
+        )
 
     new_project = Project(**project_dict)
+    new_project.is_active = True
     new_project.create()
 
     return ProjectOut(**new_project.model_dump())
@@ -92,10 +111,27 @@ def get_project(
 def update_project(
     project_data: ProjectIn,
     project_id: str,
-    subdomain: str = Depends(get_subdomain_from_request),
-    custom_domain: str = Depends(get_custom_domain_from_request),
 ):
-    existing_project = get_project_or_404(project_id, subdomain, custom_domain)
+    existing_project = get_project_or_404(project_id)
+
+    subdomain = get_sanitized_subdomain(project_data.subdomain)
+    custom_domain = get_sanitized_custom_domain(project_data.custom_domain)
+
+    if subdomain and existing_project.subdomain != subdomain and not is_subdomain_available(subdomain):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Subdomain '{subdomain}' is already taken.",
+        )
+
+    if (
+        custom_domain
+        and existing_project.custom_domain != custom_domain
+        and not is_customdomain_available(custom_domain)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Custom domain '{custom_domain}' is already taken.",
+        )
 
     existing_project = update_partially(existing_project, project_data)
     existing_project.subdomain = get_sanitized_subdomain(existing_project.subdomain)
