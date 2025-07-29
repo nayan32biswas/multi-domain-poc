@@ -32,26 +32,7 @@ sudo unlink /etc/nginx/sites-enabled/default
 ## Setup API Server
 
 - `sudo vi /etc/nginx/conf.d/backend-api.conf`
-
-```conf
-upstream backend_server {
-    server localhost:8000;
-}
-
-server {
-    listen 80;
-    server_name api.example.com;
-
-    location / {
-        proxy_pass http://backend_server;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+- Copy the nginx conf for the [backend-api.conf](../config/backend-api.conf)
 
 Restart nginx service
 
@@ -122,36 +103,7 @@ We can use the bellow command to review the key:
 ### Setup Nginx
 
 - `sudo vi /etc/nginx/conf.d/frontend.conf`
-
-```conf
-# Redirect HTTP to HTTPS
-server {
-    listen 80;
-    server_name *.example.com;
-    return 301 https://$server_name$request_uri;
-}
-
-upstream frontend_server {
-    server localhost:8080;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name *.example.com;
-
-    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
-
-    location / {
-        proxy_pass http://frontend_server;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+- Copy the nginx conf for the [frontend.conf](../config/frontend.conf)
 
 ```sh
 sudo nginx -t && sudo systemctl restart nginx
@@ -160,35 +112,34 @@ sudo systemctl status nginx
 
 ### Custom Domain Configuration
 
-- `sudo vi /etc/nginx/conf.d/custom-domain.conf`
+#### Custom Domain Without HTTPS
 
-```conf
-# This will handle all incoming domains and let FastAPI middleware determine routing
-server {
-    listen 80;
-    server_name _;  # Catch all domains
-    ; server_name ~^(?!.*\.example\.com$).*$; # Use this line if you are using the same server to serve static content on wildcard and custom domain.
-
-    # Set client max body size for file uploads
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-}
-```
+- `sudo vi /etc/nginx/conf.d/custom-domain-http.conf`
+- [custom-domain-http.conf](../config/custom-domain-http.conf)
 
 ```sh
 sudo nginx -t && sudo systemctl restart nginx
 sudo systemctl status nginx
 ```
+
+#### Custom Domain With HTTPS
+
+For the custom domain we will use one nginx config for each custom domain. We will issue new certificate for each custom domain from the CertBot.
+
+- `sudo mkdir -p /etc/nginx/conf.d/custom_domain/`
+- `sudo vi /etc/nginx/nginx.conf`
+
+```conf
+        include /etc/nginx/conf.d/*.conf;   # Existing Code
+        include /etc/nginx/sites-enabled/*; # Existing Code
+
+        include /etc/nginx/conf.d/custom_domain/*.conf;
+```
+
+- `sudo vi /etc/nginx/custom-domain-https-conf.template`
+- Copy the template file content [custom-domain-https-conf.template](../config/custom-domain-https-conf.template)
+- `sudo chmod +x ./scripts/custom-domain-https.sh`
+- `./scripts/custom-domain-https.sh example.com admin@example.com` This will be command to generate certificate and nginx config.
+
+- We configured script to automatically issue new certificate and add new nginx configuration from the existing template config.
+- `sudo certbot delete --cert-name example.com` Clean up existing certbot certificate if exists.
