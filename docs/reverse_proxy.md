@@ -138,8 +138,8 @@ For the custom domain we will use one nginx config for each custom domain. We wi
 
 - `sudo vi /etc/nginx/custom-domain-https-conf.template`
 - Copy the template file content [custom-domain-https-conf.template](../config/custom-domain-https-conf.template)
-- `sudo chmod +x ./scripts/custom-domain-https.sh`
-- `./scripts/custom-domain-https.sh example.com admin@example.com` This will be command to generate certificate and nginx config.
+- `sudo chmod +x ./script_executor/configure-custom-domain.sh`
+- `./script_executor/configure-custom-domain.sh example.com admin@example.com` This will be command to generate certificate and nginx config.
 
 - We configured script to automatically issue new certificate and add new nginx configuration from the existing template config.
 - `sudo certbot delete --cert-name example.com` Clean up existing certbot certificate if exists.

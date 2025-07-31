@@ -13,8 +13,6 @@ class ProjectOut(BaseModel):
     domain_verification_token: str | None = None
     domain_verified_at: datetime | None = None
     is_verified: bool = False
-    ssl_enabled: bool = False
-    ssl_certificate_path: str | None = None
     is_active: bool = True
     created_at: datetime
 

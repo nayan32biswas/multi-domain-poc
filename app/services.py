@@ -1,13 +1,19 @@
+import logging
 import re
 import secrets
 from datetime import datetime
 from typing import Any
 
+import httpx
 from fastapi import HTTPException, status
 from mongodb_odm import ODMObjectId
 
-from app.config import SITE_DOMAIN
+from app.config import EXECUTOR_HOST, SITE_DOMAIN
 from app.models import Project
+
+logger = logging.getLogger(__name__)
+
+MAX_CONFIGURE_RETRY = 5
 
 instruction_template = """
 To verify ownership of {domain}, please add the following DNS record:
@@ -337,9 +343,71 @@ def remove_custom_domain(project: Project) -> Project:
     project.domain_verification_token = None
     project.is_verified = False
     project.domain_verified_at = None
-    project.ssl_enabled = False
-    project.ssl_certificate_path = None
     project.updated_at = datetime.now()
 
     project.update()
     return project
+
+
+def execute_configuration_script(custom_domain: str) -> tuple[bool, str]:
+    payload: Any = {
+        "script_type": "CONFIGURE_CUSTOM_DOMAIN",
+        "data": {
+            "custom_domain": custom_domain,
+            "email": f"admin@{custom_domain}",
+        },
+    }
+
+    executor_url = f"{EXECUTOR_HOST}/run-script"
+
+    response = httpx.post(executor_url, json=payload)
+
+    response_data = response.json()
+    status = response.status_code
+
+    logger.info(f"\nConfiguration script executed with status: {status}")
+    logger.info(f"Response from the script: {response_data}\n")
+
+    if status == 200:
+        return False, "Something wen't wrong to configure the domain. Try again!"
+
+    return True, "Domain configured successfully"
+
+
+def update_configure_retry_count(project: Project):
+    project.configure_retry_count += 1
+    project.update()
+
+    return project
+
+
+def update_configured(project: Project):
+    project.is_configured = True
+    project.update()
+
+
+def configure_custom_domain(project: Project):
+    custom_domain = project.custom_domain
+    is_verified = project.is_verified
+    is_active = project.is_active
+
+    if not custom_domain:
+        return "Custom domain is missing"
+
+    if not is_verified or not is_active:
+        return "Project is not fully configured to add custom domain"
+
+    if project.is_configured:
+        return "The domain already configured"
+
+    if project.configure_retry_count >= MAX_CONFIGURE_RETRY:
+        return "Retry exhausted contact with us!"
+
+    project = update_configure_retry_count(project)
+
+    is_success, message = execute_configuration_script(custom_domain)
+
+    if is_success:
+        update_configured(project)
+
+    return message

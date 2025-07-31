@@ -13,6 +13,7 @@ DB_URL = str(os.environ.get("DB_URL"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*")
 SITE_DOMAIN = str(os.environ.get("SITE_DOMAIN"))
+EXECUTOR_HOST = os.environ.get("EXECUTOR_HOST")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

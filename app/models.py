@@ -11,9 +11,9 @@ class Project(Document):
     domain_verification_token: str | None = Field(default=None)
     domain_verified_at: datetime | None = Field(default=None)
     is_verified: bool = Field(default=False)
-    ssl_enabled: bool = Field(default=False)
-    ssl_certificate_path: str | None = Field(default=None)
     is_active: bool = Field(default=True)
+    is_configured: bool = Field(default=False)
+    configure_retry_count: int = Field(default=0)
 
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)

@@ -12,6 +12,7 @@ from app.schemas import (
     ProjectOut,
 )
 from app.services import (
+    configure_custom_domain,
     get_domain_verification_instructions,
     get_project_or_404,
     get_sanitized_custom_domain,
@@ -196,30 +197,33 @@ def verify_domain(project_id: str) -> dict[str, Any]:
     """Verify the custom domain for a project"""
     project = get_project_or_404(project_id)
 
-    is_verified = verify_custom_domain(project)
-
-    if is_verified:
-        return {
-            "verified": True,
-            "message": f"Domain {project.custom_domain} has been successfully verified!",
-            "domain": project.custom_domain,
-        }
-
     custom_domain = project.custom_domain
-    verification_token = project.domain_verification_token
-
     if not custom_domain:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No custom domain found for this project",
         )
 
+    is_verified = verify_custom_domain(project)
+
+    if is_verified:
+        configuration_message = configure_custom_domain(project)
+        return {
+            "verified": True,
+            "message": f"Domain {project.custom_domain} has been successfully verified!",
+            "domain": project.custom_domain,
+            "configuration_message": configuration_message,
+        }
+
+    verification_token = project.domain_verification_token
+    record_name = get_verification_record_name(custom_domain)
+
     return {
         "verified": False,
         "message": f"Domain {custom_domain} verification failed. Please check your DNS records.",
         "domain": custom_domain,
         "verification_token": verification_token,
-        "record_name": get_verification_record_name(custom_domain),
+        "record_name": record_name,
     }
 
 
@@ -270,3 +274,12 @@ def get_domain_instructions(project_id: str) -> dict[str, Any]:
         "verification_status": "verified" if project.is_verified else "pending",
         **instructions,
     }
+
+
+@router.get("/projects/{project_id}/configure")
+async def configure_domain(project_id: str) -> Any:
+    project = get_project_or_404(project_id)
+
+    configure_custom_domain(project)
+
+    return {}
