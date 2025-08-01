@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -27,7 +26,6 @@ from app.services import (
 from app.utils import update_partially
 
 router = APIRouter(prefix="/api")
-logger = logging.getLogger(__name__)
 
 
 def get_subdomain_from_request(request: Request) -> str | None:
@@ -280,6 +278,6 @@ def get_domain_instructions(project_id: str) -> dict[str, Any]:
 async def configure_domain(project_id: str) -> Any:
     project = get_project_or_404(project_id)
 
-    configure_custom_domain(project)
+    message = configure_custom_domain(project)
 
-    return {}
+    return {"message": message}

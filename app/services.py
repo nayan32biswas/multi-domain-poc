@@ -1,4 +1,3 @@
-import logging
 import re
 import secrets
 from datetime import datetime
@@ -10,8 +9,6 @@ from mongodb_odm import ODMObjectId
 
 from app.config import EXECUTOR_HOST, SITE_DOMAIN
 from app.models import Project
-
-logger = logging.getLogger(__name__)
 
 MAX_CONFIGURE_RETRY = 5
 
@@ -360,15 +357,15 @@ def execute_configuration_script(custom_domain: str) -> tuple[bool, str]:
 
     executor_url = f"{EXECUTOR_HOST}/run-script"
 
-    response = httpx.post(executor_url, json=payload)
+    response = httpx.post(executor_url, json=payload, timeout=60.0)
 
     response_data = response.json()
     status = response.status_code
 
-    logger.info(f"\nConfiguration script executed with status: {status}")
-    logger.info(f"Response from the script: {response_data}\n")
+    print(f"\nConfiguration script executed with status: {status}")
+    print(f"Response from the script: {response_data}\n")
 
-    if status == 200:
+    if status != 200:
         return False, "Something wen't wrong to configure the domain. Try again!"
 
     return True, "Domain configured successfully"

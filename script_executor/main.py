@@ -67,7 +67,9 @@ async def run_script(payload: ScriptPayload) -> Any:
     try:
         output = execution_function(payload.data)
         return {"output": output}
-    except subprocess.CalledProcessError as e:
-        return {"error": e.output.decode(), "code": e.returncode}
+    except subprocess.CalledProcessError as ex:
+        print(f"Error executing script: {ex.output.decode()}")
+        return {"error": ex.output.decode(), "code": ex.returncode}
     except Exception as ex:
+        print(f"Unexpected error: {str(ex)}")
         return {"error": str(ex), "code": 500}
