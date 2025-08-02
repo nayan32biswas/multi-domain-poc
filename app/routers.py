@@ -111,6 +111,13 @@ def delete_project(
     custom_domain: str = Depends(get_custom_domain_from_request),
 ):
     project = get_project_or_404(project_id, subdomain, custom_domain)
+
+    if project.is_configured or project.custom_domain:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Before deleting a project, please remove its custom domain configuration.",
+        )
+
     project.delete()
 
     return {"detail": "Project deleted successfully"}
@@ -251,7 +258,7 @@ def get_domain_instructions(project_id: str) -> dict[str, Any]:
     }
 
 
-@router.get("/projects/{project_id}/configure")
+@router.get("/projects/{project_id}/re-configure")
 async def configure_domain(project_id: str) -> Any:
     project = get_project_or_404(project_id)
 

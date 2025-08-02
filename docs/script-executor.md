@@ -88,6 +88,8 @@ sudo systemctl stop script-executor
 sudo systemctl disable script-executor
 ```
 
+- `journalctl -u script-executor -f` Check the logs
+
 ### Update the App
 
 - Update the environment variable if required:
@@ -99,7 +101,8 @@ sudo su - scriptexec
 
 sudo cp -r /path/to/script_executor /opt/executor/
 sudo chown -R scriptexec:scriptexec /opt/executor
-sudo chmod +x /opt/executor/script_executor/configure-custom-domain.sh
+sudo chmod +x /opt/executor/script_executor/configure-custom-domain.sh \
+  /opt/executor/script_executor/remove-custom-domain-config.sh
 
 sudo systemctl restart script-executor
 ```

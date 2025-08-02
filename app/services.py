@@ -55,6 +55,8 @@ If verification fails:
 5. Some DNS providers require the full domain name including trailing dot
 6. Make sure both TXT (for verification) and CNAME (for routing) records are added
 7. Test domain accessibility: ping {domain}
+
+If the custom domain configuration failed use "/api/projects/{project_id}/re-configure" API to retry the configuration.
 """
 
 # Subdomain should not start or end with a hyphen, and must be 3-63 characters long
