@@ -1,75 +1,71 @@
 import os
+import shutil
 import subprocess
-from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 app = FastAPI()
 
 
-def to_bool(value: str) -> bool:
-    return value.strip().lower() == "true"
-
-
-DEBUG = to_bool(os.environ.get("DEBUG", "True"))
 TIMEOUT_SEC = 60 * 3
+BASE_DIR = Path(__file__).resolve().parent
+sudo_path = shutil.which("sudo") or "/usr/bin/sudo"
 
-custom_domain_script = "script_executor/configure-custom-domain.sh"
+DEBUG = os.environ.get("DEBUG", "True").strip().lower() == "true"
 
-
-class ScriptType(StrEnum):
-    CONFIGURE_CUSTOM_DOMAIN = "CONFIGURE_CUSTOM_DOMAIN"
-
-
-class ScriptPayload(BaseModel):
-    script_type: ScriptType
-    data: dict[str, Any]
+custom_domain_script_file = os.path.join(BASE_DIR, "configure-custom-domain.sh")
 
 
-def configure_custom_domain(data: dict[str, Any]) -> str:
-    custom_domain = data.get("custom_domain")
-    email = data.get("email")
+class CustomDomain(BaseModel):
+    custom_domain: str
+    email: str
 
-    if not custom_domain:
-        raise ValueError("Custom domain is required")
 
-    if not email:
-        raise ValueError("Email is required")
+def get_custom_domain_config_args(data: CustomDomain) -> list[str]:
+    custom_domain = data.custom_domain
+    email = data.email
 
-    command_args: Any = ["sudo", "bash", custom_domain_script, custom_domain, email]
+    command_args: Any = [sudo_path, custom_domain_script_file, custom_domain, email]
     if DEBUG:
-        command_args.append("true")
+        command_args += ["true"]
 
-    output = subprocess.check_output(
-        command_args,
-        stderr=subprocess.STDOUT,
-        timeout=TIMEOUT_SEC,
-    )
-
-    return output.decode()
+    return command_args
 
 
-execution_map = {
-    ScriptType.CONFIGURE_CUSTOM_DOMAIN: configure_custom_domain,
-}
-
-
-@app.post("/run-script")
-async def run_script(payload: ScriptPayload) -> Any:
-    script_type = payload.script_type
-    execution_function = execution_map.get(script_type)
-
-    if not execution_function:
-        return {"error": f"Script type '{script_type}' not supported"}
-
+def _script_executor(func: Any, data: Any) -> Any:
     try:
-        output = execution_function(payload.data)
-        return {"output": output}
+        command_args = func(data)
+
+        print(f'Executing command: "{" ".join(command_args)}"')
+
+        result = subprocess.run(
+            command_args,
+            text=True,
+            capture_output=True,
+        )
+
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+        }
     except subprocess.CalledProcessError as ex:
         print(f"Error executing script: {ex.output.decode()}")
-        return {"error": ex.output.decode(), "code": ex.returncode}
+        return HTTPException(
+            detail={"error": ex.output.decode(), "code": ex.returncode},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     except Exception as ex:
         print(f"Unexpected error: {str(ex)}")
-        return {"error": str(ex), "code": 500}
+        return HTTPException(
+            detail={"error": str(ex), "code": 500},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@app.post("/configure-custom-domain")
+async def configure_custom_domain(payload: CustomDomain) -> Any:
+    return _script_executor(get_custom_domain_config_args, payload)

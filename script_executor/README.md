@@ -88,8 +88,6 @@ sudo systemctl stop script-executor
 sudo systemctl disable script-executor
 ```
 
-`sudo ufw allow 9090` Allow 9090 port for the main to call the executor. Should be avoided in production.
-
 ### Update the App
 
 - Update the environment variable if required:

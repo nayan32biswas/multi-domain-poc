@@ -348,24 +348,21 @@ def remove_custom_domain(project: Project) -> Project:
 
 def execute_configuration_script(custom_domain: str) -> tuple[bool, str]:
     payload: Any = {
-        "script_type": "CONFIGURE_CUSTOM_DOMAIN",
-        "data": {
-            "custom_domain": custom_domain,
-            "email": f"admin@{custom_domain}",
-        },
+        "custom_domain": custom_domain,
+        "email": f"admin@{custom_domain}",
     }
 
-    executor_url = f"{EXECUTOR_HOST}/run-script"
+    executor_url = f"{EXECUTOR_HOST}/configure-custom-domain"
 
     response = httpx.post(executor_url, json=payload, timeout=60.0)
 
     response_data = response.json()
-    status = response.status_code
+    status_code = response.status_code
 
-    print(f"\nConfiguration script executed with status: {status}")
+    print(f"\nConfiguration script executed with status: {status_code}")
     print(f"Response from the script: {response_data}\n")
 
-    if status != 200:
+    if status_code != status.HTTP_200_OK:
         return False, "Something wen't wrong to configure the domain. Try again!"
 
     return True, "Domain configured successfully"
