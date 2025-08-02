@@ -14,14 +14,15 @@ class ProjectOut(BaseModel):
     domain_verified_at: datetime | None = None
     is_verified: bool = False
     is_active: bool = True
+    is_configured: bool = False
+    configure_retry_count: int = 0
     created_at: datetime
+    updated_at: datetime
 
 
 class ProjectIn(BaseModel):
     title: str
     description: str | None = None
-    subdomain: str
-    custom_domain: str | None = None
 
 
 class CustomDomainIn(BaseModel):

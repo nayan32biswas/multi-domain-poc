@@ -1,5 +1,6 @@
 import re
 import secrets
+import string
 from datetime import datetime
 from typing import Any
 
@@ -11,6 +12,7 @@ from app.config import EXECUTOR_HOST, SITE_DOMAIN
 from app.models import Project
 
 MAX_CONFIGURE_RETRY = 5
+SUBDOMAIN_CHARS = string.ascii_lowercase + string.digits
 
 instruction_template = """
 To verify ownership of {domain}, please add the following DNS record:
@@ -55,7 +57,7 @@ If verification fails:
 7. Test domain accessibility: ping {domain}
 """
 
-
+# Subdomain should not start or end with a hyphen, and must be 3-63 characters long
 subdomain_regex = re.compile(r"^(?!-)[a-zA-Z0-9-]{3,63}(?<!-)$")
 reserved_subdomains = {
     "www",
@@ -83,11 +85,14 @@ reserved_subdomains = {
 }
 
 
-def get_sanitized_subdomain(subdomain: str | None) -> str | None:
-    if not subdomain:
-        return None
-
+def get_sanitized_subdomain(subdomain: str) -> str | None:
     subdomain = subdomain.strip()
+
+    if not subdomain:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subdomain cannot be empty",
+        )
 
     if subdomain in reserved_subdomains:
         raise HTTPException(
@@ -102,6 +107,28 @@ def get_sanitized_subdomain(subdomain: str | None) -> str | None:
         )
 
     return subdomain
+
+
+def generate_subdomain() -> str:
+    """Generate a random subdomain"""
+
+    def get_random_subdomain_str() -> str:
+        # Generate a random string with only lowercase letters and numbers
+        return "".join(secrets.choice(SUBDOMAIN_CHARS) for _ in range(8))
+
+    for _ in range(10):  # Try up to 10 times to find a valid subdomain
+        subdomain = get_random_subdomain_str()
+
+        if subdomain in reserved_subdomains:
+            continue
+
+        if is_subdomain_available(subdomain):
+            return subdomain
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Failed to generate a unique subdomain after multiple attempts.",
+    )
 
 
 def get_sanitized_custom_domain(custom_domain: str | None) -> str | None:
@@ -334,18 +361,6 @@ def verify_custom_domain(project: Project) -> bool:
     return is_verified
 
 
-def remove_custom_domain(project: Project) -> Project:
-    """Remove custom domain from project"""
-    project.custom_domain = None
-    project.domain_verification_token = None
-    project.is_verified = False
-    project.domain_verified_at = None
-    project.updated_at = datetime.now()
-
-    project.update()
-    return project
-
-
 def execute_configuration_script(custom_domain: str) -> tuple[bool, str]:
     payload: Any = {
         "custom_domain": custom_domain,
@@ -387,13 +402,10 @@ def configure_custom_domain(project: Project):
 
     if not custom_domain:
         return "Custom domain is missing"
-
     if not is_verified or not is_active:
         return "Project is not fully configured to add custom domain"
-
     if project.is_configured:
         return "The domain already configured"
-
     if project.configure_retry_count >= MAX_CONFIGURE_RETRY:
         return "Retry exhausted contact with us!"
 
@@ -405,3 +417,54 @@ def configure_custom_domain(project: Project):
         update_configured(project)
 
     return message
+
+
+def remove_custom_domain_config(project: Project):
+    custom_domain = project.custom_domain
+
+    if not custom_domain:
+        return False, "Custom domain is missing"
+    if not project.is_configured:
+        return False, "The domain is not configured"
+
+    payload: Any = {
+        "custom_domain": custom_domain,
+    }
+
+    executor_url = f"{EXECUTOR_HOST}/remove-custom-domain"
+    response = httpx.post(executor_url, json=payload, timeout=60.0)
+
+    status_code = response.status_code
+    response_data = response.json()
+
+    print(f"\nRemove custom domain script executed with status: {status_code}")
+    print(f"Response from the script: {response_data}\n")
+
+    if status_code != status.HTTP_200_OK:
+        return False, "Something went wrong while removing the domain configuration. Try again!"
+
+    return True, "Custom domain configuration removed successfully"
+
+
+def remove_custom_domain(project: Project) -> Project:
+    """Remove custom domain from a project"""
+
+    is_deleted, message = remove_custom_domain_config(project)
+
+    if not is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message,
+        )
+
+    project.custom_domain = None
+    project.domain_verification_token = None
+    project.is_verified = False
+    project.domain_verified_at = None
+    project.is_configured = False
+    project.configure_retry_count = 0
+    project.updated_at = datetime.now()
+
+    project.update()
+
+    return project

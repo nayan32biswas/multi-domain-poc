@@ -17,6 +17,7 @@ sudo_path = shutil.which("sudo") or "/usr/bin/sudo"
 DEBUG = os.environ.get("DEBUG", "True").strip().lower() == "true"
 
 custom_domain_script_file = os.path.join(BASE_DIR, "configure-custom-domain.sh")
+remove_custom_domain_script_file = os.path.join(BASE_DIR, "remove-custom-domain-config.sh")
 
 
 class CustomDomain(BaseModel):
@@ -29,6 +30,20 @@ def get_custom_domain_config_args(data: CustomDomain) -> list[str]:
     email = data.email
 
     command_args: Any = [sudo_path, custom_domain_script_file, custom_domain, email]
+    if DEBUG:
+        command_args += ["true"]
+
+    return command_args
+
+
+class RemoveCustomDomain(BaseModel):
+    custom_domain: str
+
+
+def get_remove_custom_domain_config_args(data: RemoveCustomDomain) -> list[str]:
+    custom_domain = data.custom_domain
+
+    command_args: Any = [sudo_path, remove_custom_domain_script_file, custom_domain]
     if DEBUG:
         command_args += ["true"]
 
@@ -69,3 +84,8 @@ def _script_executor(func: Any, data: Any) -> Any:
 @app.post("/configure-custom-domain")
 async def configure_custom_domain(payload: CustomDomain) -> Any:
     return _script_executor(get_custom_domain_config_args, payload)
+
+
+@app.post("/remove-custom-domain")
+async def remove_custom_domain(payload: RemoveCustomDomain) -> Any:
+    return _script_executor(get_remove_custom_domain_config_args, payload)

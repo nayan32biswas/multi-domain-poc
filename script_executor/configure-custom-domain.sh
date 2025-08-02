@@ -10,7 +10,7 @@ CUSTOM_DOMAIN_TEMPLATE_FILE="/etc/nginx/custom-domain-https-conf.template"
 NGINX_CONF_FILE="/etc/nginx/conf.d/custom_domain/$CUSTOM_DOMAIN.conf"
 
 if [ "$IS_DEBUG" ]; then
-  echo "Dev mode script. Script executed."
+  echo "Dev Mode: Created configuration for $CUSTOM_DOMAIN."
   exit 0
 fi
 
@@ -87,13 +87,13 @@ setup_nginx_config() {
   # Check the Nginx configuration for syntax errors
   if ! nginx -t; then
       echo "Nginx configuration test failed. Please check the configuration file."
-      exit 1
+      return 1
   fi
 
   # Reload Nginx to apply the new configuration
   if ! nginx -s reload; then
       echo "Failed to reload Nginx. Please check the service status."
-      exit 1
+      return 1
   fi
 
   return 0
