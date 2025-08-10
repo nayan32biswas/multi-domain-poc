@@ -62,12 +62,12 @@ graph TB
     %% Configuration Updates
     ScriptExec -->|Updates| Nginx
 
-    style User fill:#e1f5fe
-    style API fill:#f3e5f5
-    style Static fill:#e8f5e8
-    style ScriptExec fill:#fff3e0
-    style DB fill:#fce4ec
-    style Nginx fill:#e0f2f1
+    style User fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style API fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    style Static fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style ScriptExec fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style DB fill:#F44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    style Nginx fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
 ```
 
 ## Overall Project Structure
