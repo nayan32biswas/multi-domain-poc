@@ -7,6 +7,69 @@ This is a proof-of-concept project on how wildcard domains work. Additionally, w
 
 We can use the API to create a project. Each project will work like an independent app. Where each project will have a subdomain. With that subdomain, we can access our newly created project data. The subdomain will be abc.example.com. Also, we can integrate our custom domain with a project.
 
+## High-Level Architecture (Single Server)
+
+```mermaid
+graph TB
+    %% External Components
+    User[👤 User]
+    DNS[🌐 DNS Provider]
+    Internet[🌍 Internet]
+
+    %% Load Balancer / Reverse Proxy
+    subgraph "Load Balancer / Reverse Proxy"
+        Nginx[🔀 Nginx]
+        SSL[🔒 SSL/TLS Certificates]
+    end
+
+    %% Application Services
+    subgraph "Application Services"
+        API[🚀 API Server<br/>FastAPI - Port 8000]
+        Static[📁 Static Server<br/>FastAPI - Port 8080]
+        ScriptExec[⚙️ Script Executor Internal<br/>FastAPI - Port 9090]
+        DB[(🗄️ MongoDB<br/>Port 27017)]
+        StaticFiles[📄 Static Files<br/>/static directory]
+    end
+
+    %% External Services
+    Certbot[🔐 Certbot<br/>Let's Encrypt]
+
+    %% User Connections
+    User -->|HTTPS| Internet
+    Internet --> Nginx
+
+    %% DNS Setup
+    DNS -->|TXT Records for verification| Internet
+    DNS -->|CNAME Records| Internet
+
+    %% Nginx Routing
+    Nginx -->|api.example.com| API
+    Nginx -->|*.example.com| Static
+    Nginx -->|custom-domains| Static
+
+    %% Service Dependencies
+    API --> DB
+    Static --> DB
+    Static --> StaticFiles
+
+    %% SSL Certificate Management
+    Certbot --> SSL
+    Certbot --> Nginx
+
+    %% Internal API Calls
+    API -->|HTTP| ScriptExec
+
+    %% Configuration Updates
+    ScriptExec -->|Updates| Nginx
+
+    style User fill:#e1f5fe
+    style API fill:#f3e5f5
+    style Static fill:#e8f5e8
+    style ScriptExec fill:#fff3e0
+    style DB fill:#fce4ec
+    style Nginx fill:#e0f2f1
+```
+
 ## Overall Project Structure
 
 For simplicity, we don't have any authentication, and security best practices are ignored. This is A POC project and not meant to be used in production directly. Most of the things we tried to keep simple.
@@ -54,6 +117,10 @@ User the API `/api/projects/{project_id}/custom-domain/instructions` to get inst
 - `docker compose up -d server static_server`
 
 ## System Documentation
+
+### [System Architecture](./docs/architecture.md)
+
+### [Production Readiness Checklist](./docs/production-checklist.md)
 
 ### [Reverse Proxy Setup](./docs/reverse_proxy.md)
 
