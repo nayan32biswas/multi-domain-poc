@@ -3,6 +3,11 @@
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 
     email your@example.com
+
+    on_demand_tls {
+        # Check if custom domain is valid to serve.
+        ask https://customapi.neuwark.com/api/domain-check
+    }
 }
 
 # --- Reusable TLS config for Namecheap DNS ---
@@ -26,4 +31,15 @@ api.example.com {
 *.example.com {
     import namecheap_dns
     reverse_proxy static_server:80
+}
+
+# Catch-all for custom domains (any host)
+:443 {
+    tls {
+        on_demand
+    }
+
+    handle {
+        reverse_proxy static_server:80
+    }
 }
