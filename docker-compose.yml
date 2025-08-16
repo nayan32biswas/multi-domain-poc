@@ -15,22 +15,6 @@ services:
       - db
     networks:
       - multi_domain_tier
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  static_server:
-    image: multi_domain_server:latest
-    container_name: multi_domain_static_server
-    command: "uv run -m uvicorn static_app.main:app --reload --host 0.0.0.0 --port 8080"
-    ports:
-      - 8080:8080
-    env_file: .env
-    volumes:
-      - ./static/:/code/static
-    depends_on:
-      - db
-    networks:
-      - multi_domain_tier
 
   db:
     image: mongo:8
@@ -44,23 +28,18 @@ services:
     expose:
       - 27017
     volumes:
-      - volume_db:/data/db
+      - multi_domain_db:/data/db
     networks:
       - multi_domain_tier
 
-  frontend-builder:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    volumes:
-      - ./static:/shared
-    command: sh -c "cp -r /output/* /shared/ && ls -la /shared/"
-
 volumes:
-  volume_db:
-    driver: local
-    name: multi_domain_db_volume
+  multi_domain_db:
+    external: true
+    name: multi_domain_db
 
 networks:
   multi_domain_tier:
     driver: bridge
+
+
+# docker volume create multi_domain_db

@@ -1,291 +1,172 @@
-# Multi-Domain POC - System Architecture
+# Multi-Domain SaaS Application Architecture
 
 ## Overview
 
-This document provides a comprehensive architectural overview of the Multi-Domain POC system, which demonstrates wildcard subdomain management and custom domain integration for multi-tenant applications.
+This document describes the high-level architecture of our multi-domain SaaS application that supports automatic subdomain provisioning and custom domain configuration. The application has been redesigned to use Caddy as a reverse proxy, replacing the previous Nginx-based architecture for simplified SSL certificate management and dynamic domain handling.
 
-## High-Level Architecture (Single Server)
+## High Level Architecture
 
 ```mermaid
 graph TB
-    %% External Components
+    %% External
     User[👤 User]
     DNS[🌐 DNS Provider]
-    Internet[🌍 Internet]
+    
+    %% Core Services
+    Caddy[🔀 Caddy Reverse Proxy<br/>Automatic HTTPS & SSL]
+    API[🚀 API Server<br/>FastAPI]
+    Frontend[📁 Frontend<br/>React/Nginx]
+    DB[(🗄️ MongoDB)]
 
-    %% Load Balancer / Reverse Proxy
-    subgraph "Load Balancer / Reverse Proxy"
-        Nginx[🔀 Nginx]
-        SSL[🔒 SSL/TLS Certificates]
-    end
-
-    %% Application Services
-    subgraph "Application Services"
-        API[🚀 API Server<br/>FastAPI - Port 8000]
-        Static[📁 Static Server<br/>FastAPI - Port 8080]
-        ScriptExec[⚙️ Script Executor Internal<br/>FastAPI - Port 9090]
-        DB[(🗄️ MongoDB<br/>Port 27017)]
-        StaticFiles[📄 Static Files<br/>/static directory]
-    end
-
-    %% External Services
-    Certbot[🔐 Certbot<br/>Let's Encrypt]
-
-    %% User Connections
-    User -->|HTTPS| Internet
-    Internet --> Nginx
-
-    %% DNS Setup
-    DNS -->|TXT Records for verification| Internet
-    DNS -->|CNAME Records| Internet
-
-    %% Nginx Routing
-    Nginx -->|api.example.com| API
-    Nginx -->|*.example.com| Static
-    Nginx -->|custom-domains| Static
-
-    %% Service Dependencies
+    %% Traffic Flow
+    User -->|HTTPS| Caddy
+    DNS -.->|Domain Records| Caddy
+    
+    %% Service Routing
+    Caddy -->|api.example.com| API
+    Caddy -->|*.example.com<br/>custom domains| Frontend
+    
+    %% Data Flow
     API --> DB
-    Static --> DB
-    Static --> StaticFiles
 
-    %% SSL Certificate Management
-    Certbot --> SSL
-    Certbot --> Nginx
-
-    %% Internal API Calls
-    API -->|HTTP| ScriptExec
-
-    %% Configuration Updates
-    ScriptExec -->|Updates| Nginx
-
+    %% Styling
     style User fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
     style API fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
-    style Static fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
-    style ScriptExec fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style Frontend fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
     style DB fill:#F44336,stroke:#D32F2F,stroke-width:2px,color:#fff
-    style Nginx fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
+    style Caddy fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
 ```
 
-## Component Architecture
+## Sequence Diagrams
 
-### 1. Reverse Proxy Layer (Nginx)
-
-**Purpose**: Routes incoming requests to appropriate services based on domain/subdomain patterns.
-
-**Configuration Files**:
-
-- `backend-api.conf` - Routes `api.example.com` to API server
-- `frontend.conf` - Routes `*.example.com` wildcard subdomains to Static server
-- `custom-domain-http.conf` - Routes custom domains to Static server
-- `custom-domain-https-conf.template` - Template for HTTPS custom domain configs
-
-**Routing Logic**:
-
-```text
-api.example.com        → API Server (Port 8000)
-*.example.com          → Static Server (Port 8080)
-custom-domain.com      → Static Server (Port 8080)
-```
-
-### 2. API Server (FastAPI)
-
-**Purpose**: Core business logic, project management, and custom domain orchestration.
-
-**Key Features**:
-
-- Project CRUD operations
-- Custom domain verification
-- DNS record generation
-- Integration with Script Executor
-
-### 3. Static Server (FastAPI)
-
-**Purpose**: Serves tenant-specific content based on subdomain or custom domain.
-
-**Key Features**:
-
-- Multi-tenant content serving
-- Domain-based project resolution
-- Static file serving from `/static` directory
-- Request routing based on `Host` header
-
-**Request Flow**:
-
-1. Extract domain/subdomain from Host header
-2. Query MongoDB for project associated with domain
-3. Serve appropriate static content
-4. Return 404 if project not found
-
-### 4. Script Executor (FastAPI)
-
-**Purpose**: Executes system-level operations for custom domain configuration.
-
-**Key Features**:
-
-- SSL certificate generation via Certbot
-- Nginx configuration management
-- Custom domain setup automation
-- Secure shell script execution
-
-**Operations**:
-
-- `POST /configure-custom-domain` - Creates SSL cert and Nginx config
-- `POST /remove-custom-domain` - Removes SSL cert and Nginx config
-
-### 5. Database Layer (MongoDB)
-
-**Purpose**: Persistent storage for project metadata and domain mappings.
-
-**Collections**:
-
-- `projects` - Project information, subdomains, custom domains, verification status
-
-## Domain Management Flow
-
-### Subdomain Creation
+### Subdomain Request Flow
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant API
-    participant DB
-    participant Static
+    participant Br as Browser
+    participant Cad as Caddy
+    participant Front as Frontend
 
-    User->>API: POST /api/projects/
-    API->>API: Generate unique subdomain
-    API->>DB: Store project with subdomain
-    API->>User: Return project details
-    User->>Static: Access abc.example.com
-    Static->>DB: Query project by subdomain
-    Static->>User: Serve project content
+    Br->>Cad: HTTPS request (project123.example.com)
+    Note over Cad: Wildcard cert already available
+    Cad->>Front: Proxy request
+    Front-->>Cad: Rendered page
+    Cad-->>Br: HTTPS response
 ```
 
-### Custom Domain Integration
+### First Custom Domain Request
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant API
-    participant DB
-    participant ScriptExec
-    participant DNS
-    participant Certbot
-    participant Nginx
+    participant Br as Browser
+    participant Cad as Caddy
+    participant API as FastAPI
+    participant ACME as Let\'s Encrypt
 
-    User->>API: PUT /projects/{id}/custom-domain
-    API->>API: Generate verification token
-    API->>DB: Store custom domain + token
-    API->>User: Return TXT record details
+    Br->>Cad: TLS ClientHello (customdomain.com)
+    Cad->>API: GET /api/domain-check?host=customdomain.com
 
-    User->>DNS: Add TXT record
-    User->>API: POST /projects/{id}/verify-domain
-    API->>API: Verify TXT record via DNS lookup
-    API->>DB: Mark domain as verified
-
-    API->>ScriptExec: POST /configure-custom-domain
-    ScriptExec->>Certbot: Generate SSL certificate
-    ScriptExec->>Nginx: Create domain-specific config
-    ScriptExec->>API: Return success
-
-    User->>DNS: Add CNAME record
-    User->>Static: Access custom-domain.com
-    Static->>DB: Query project by custom domain
-    Static->>User: Serve project content
+    API-->>Cad: 200 (authorized)
+    Cad->>ACME: New Order (customdomain.com)
+    ACME-->>Cad: Challenge (HTTP-01/ALPN-01)
+    Cad->>ACME: Complete challenge
+    ACME-->>Cad: Certificate
+    Cad-->>Br: HTTPS response (proxied content)
 ```
 
-## Security Considerations
+## Architecture Components
 
-### SSL/TLS Management
+### 1. Reverse Proxy Layer (Caddy)
 
-- **Wildcard Certificate**: Single cert for `*.example.com`
-- **Custom Domain Certs**: Individual certs per custom domain
-- **Automatic Renewal**: Certbot with cron jobs
+**Caddy Server** (`proxy_server` service)
 
-### Domain Verification
+- **Purpose**: Single entry point for all HTTP/HTTPS traffic
+- **Features**:
+  - Automatic HTTPS with Let's Encrypt
+  - On-demand TLS for custom domains
+  - DNS-01 challenge support via Namecheap plugin
+  - Dynamic domain validation
+- **Ports**: 80 (HTTP), 443 (HTTPS), 443/UDP (HTTP/3)
+- **Configuration**: `/etc/caddy/Caddyfile`
 
-- **TXT Record Verification**: Ensures domain ownership
-- **DNS Propagation Check**: Validates global DNS updates
-- **Token-based Verification**: Secure random tokens for verification
+**TLS Certificate Management**:
 
-### Network Security
+- **Wildcard Certificates**: For `*.example.com` using DNS-01 challenge with Namecheap
+- **On-Demand Certificates**: For custom domains with domain validation
+- **Automatic Renewal**: Handled by Caddy automatically
 
-- **CORS Middleware**: Configured for cross-origin requests
-- **Trusted Host Middleware**: Host header validation
-- **Reverse Proxy**: Nginx as security boundary
+### 2. Application Services
 
-## Deployment Architecture
+**API Server** (`server` service)
 
-### Development Environment
+- **Technology**: FastAPI with Python 3.12
+- **Domain**: `api.example.com`
+- **Purpose**:
+  - Project management and metadata storage
+  - Domain verification and validation
+  - Custom domain configuration
+
+**Static Server** (`static_server` service)
+
+- **Technology**: Nginx serving React/Vite frontend
+- **Purpose**: Serve frontend application for subdomains and custom domains
+- **Domains**:
+  - `*.example.com` (subdomains)
+  - Custom domains (via Caddy routing)
+- **Features**:
+  - SPA routing support
+  - Static asset optimization
+  - Gzip compression
+
+**Database** (`db` service)
+
+- **Technology**: MongoDB 8
+
+### 3. Domain Management Flow
+
+#### Subdomain Provisioning
+
+1. User creates project via API
+2. System generates unique subdomain (`{project}.example.com`)
+3. Caddy automatically serves content via wildcard certificate
+4. DNS wildcard record routes traffic to Caddy
+
+#### Custom Domain Integration
+
+1. User adds custom domain via API
+2. System generates TXT record for domain verification
+3. User adds TXT and CNAME records to their DNS
+4. Caddy validates domain via `/api/domain-check` endpoint
+5. On-demand TLS certificate issued for custom domain
+6. Traffic routed to static server
+
+### 5. Security Features
+
+- **Domain Validation**: Custom domains validated via `/api/domain-check`
+- **TLS Encryption**: All traffic encrypted with automatic certificate management
+- **Network Isolation**: Services communicate via internal Docker network
+- **Environment Isolation**: Separate environment files for different services
+
+### 6. Deployment Configuration
+
+**Required DNS Records**:
 
 ```bash
-docker-compose up server          # API + Static + DB
-cd frontend && npm run dev        # Frontend development server
+# API subdomain
+Type: A Record
+Host: api.example.com
+Value: <server_ip>
+
+# Wildcard for subdomains
+Type: A Record  
+Host: *.example.com
+Value: <server_ip>
 ```
 
-### Production Environment
+**Docker Volumes**:
 
-```bash
-docker-compose up --build frontend-builder  # Build static assets
-docker-compose build server                 # Build application
-docker-compose up -d server static_server   # Run production services
-```
+- `multi_domain_db`: Database persistence
+- `multi_domain_caddy_data`: SSL certificates and ACME data
+- `multi_domain_caddy_config`: Caddy runtime configuration
 
-### Service Dependencies
-
-```text
-MongoDB (Port 27017)
-└── API Server (Port 8000)
-    └── Script Executor (Port 9090)
-└── Static Server (Port 8080)
-    └── Static Files (/static)
-```
-
-## Scaling Considerations
-
-### Horizontal Scaling
-
-- **API Server**: Stateless, can be load-balanced
-- **Static Server**: Can be replicated behind load balancer
-- **Database**: MongoDB replica sets for high availability
-
-### Performance Optimization
-
-- **CDN Integration**: Static assets via CDN
-- **Caching**: Redis for session/domain cache
-- **Database Indexing**: Subdomain and custom_domain fields
-
-### Monitoring & Observability
-
-- **Health Checks**: `/health` endpoints for each service
-- **Logging**: Structured logging for request tracing
-- **Metrics**: Performance monitoring for response times
-
-## File Structure
-
-```text
-multi-domain-poc/
-├── app/                    # API Server
-│   ├── main.py            # FastAPI application
-│   ├── routers.py         # API endpoints
-│   ├── services.py        # Business logic
-│   ├── models.py          # Database models
-│   └── schemas.py         # Pydantic schemas
-├── static_app/            # Static Server
-│   └── main.py           # FastAPI static server
-├── script_executor/       # Script Executor
-│   ├── main.py           # Script execution API
-│   ├── configure-custom-domain.sh
-│   └── remove-custom-domain-config.sh
-├── config/               # Nginx configurations
-│   ├── backend-api.conf
-│   ├── frontend.conf
-│   ├── custom-domain-http.conf
-│   └── custom-domain-https-conf.template
-├── frontend/             # React frontend
-├── static/              # Built static assets
-└── docs/                # Documentation
-    ├── reverse_proxy.md
-    ├── script-executor.md
-    └── architecture.md
-```
+This architecture provides a robust, scalable foundation for a multi-tenant SaaS application with automatic subdomain provisioning and seamless custom domain integration.

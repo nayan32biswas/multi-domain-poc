@@ -1,0 +1,45 @@
+{
+    # Only for testing. Using letsencrypt staging server to avoid rate limits.
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+    email your@example.com
+
+    on_demand_tls {
+        # Check if custom domain is valid to serve.
+        ask https://api.example.com/api/domain-check
+    }
+}
+
+# --- Reusable TLS config for Namecheap DNS ---
+(namecheap_dns) {
+    # Obtain wildcard certificate via DNS-01 with Namecheap
+    tls {
+        dns namecheap {
+            api_key {env.NAMECHEAP_API_KEY}
+            user {env.NAMECHEAP_API_USER}
+            api_endpoint https://api.namecheap.com/xml.response
+            client_ip {env.NAMECHEAP_CLIENT_IP}
+        }
+    }
+}
+
+api.example.com {
+    import namecheap_dns
+    reverse_proxy server:8000
+}
+
+*.example.com {
+    import namecheap_dns
+    reverse_proxy static_server:80
+}
+
+# Catch-all for custom domains (any host)
+:443 {
+    tls {
+        on_demand
+    }
+
+    handle {
+        reverse_proxy static_server:80
+    }
+}
