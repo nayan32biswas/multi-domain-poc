@@ -1,8 +1,9 @@
+import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
-from app.config import DEBUG, LOCAL_SUBDOMAIN
+from app.config import DEBUG, LOCAL_SUBDOMAIN, SITE_DOMAIN
 from app.models import Project
 from app.schemas import (
     CustomDomainIn,
@@ -11,7 +12,6 @@ from app.schemas import (
     ProjectOut,
 )
 from app.services import (
-    configure_custom_domain,
     generate_subdomain,
     get_domain_verification_instructions,
     get_project_or_404,
@@ -112,12 +112,6 @@ def delete_project(
 ):
     project = get_project_or_404(project_id, subdomain, custom_domain)
 
-    if project.is_configured or project.custom_domain:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Before deleting a project, please remove its custom domain configuration.",
-        )
-
     project.delete()
 
     return {"detail": "Project deleted successfully"}
@@ -187,14 +181,12 @@ def verify_domain(project_id: str) -> dict[str, Any]:
         )
 
     is_verified = verify_custom_domain(project)
-
     if is_verified:
-        configuration_message = configure_custom_domain(project)
         return {
             "verified": True,
             "message": f"Domain {project.custom_domain} has been successfully verified!",
             "domain": project.custom_domain,
-            "configuration_message": configuration_message,
+            "configuration_message": "Domain configuration is valid.",
         }
 
     verification_token = project.domain_verification_token
@@ -258,10 +250,65 @@ def get_domain_instructions(project_id: str) -> dict[str, Any]:
     }
 
 
-@router.get("/projects/{project_id}/re-configure")
-async def configure_domain(project_id: str) -> Any:
-    project = get_project_or_404(project_id)
+@router.get("/domain-check")
+async def domain_check(domain: str | None = None) -> Any:
+    """
+    Check the validity of a domain.
+    returning 200 OK if the domain is valid,
+    403 Forbidden if the domain is not valid and reverse will not give access to the static files.
 
-    message = configure_custom_domain(project)
+    You can create a separate service for this app
+    to isolate the original API server on it's dedicated server.
+    """
 
-    return {"message": message}
+    logging.info(f"Checking domain: {domain}")
+
+    if not domain:
+        return Response(status_code=403)
+
+    def get_subdomain_from_host(host: str) -> str | None:
+        if not host.endswith(SITE_DOMAIN):
+            return None
+
+        parts = host.split(".")
+        if len(parts) < 3:
+            return None
+
+        subdomain = parts[0]
+
+        return subdomain
+
+    def is_project_exists(filter: dict[str, Any]) -> bool:
+        project = Project.find_one(filter)
+
+        if project:
+            return True
+
+        return False
+
+    def is_valid_subdomain(subdomain: str) -> bool:
+        filter: dict[str, Any] = {
+            "subdomain": subdomain,
+            "is_active": True,
+        }
+
+        return is_project_exists(filter)
+
+    def is_valid_domain(custom_domain: str) -> bool:
+        filter: dict[str, Any] = {
+            "is_active": True,
+            "is_verified": True,
+            "custom_domain": custom_domain,
+        }
+
+        return is_project_exists(filter)
+
+    subdomain = get_subdomain_from_host(domain)
+
+    if subdomain and is_valid_subdomain(subdomain):
+        return Response(status_code=200)
+
+    if is_valid_domain(domain):
+        return Response(status_code=200)
+
+    return Response(status_code=403)

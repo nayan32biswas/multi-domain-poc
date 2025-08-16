@@ -1,0 +1,4 @@
+# Dedicated API server.
+api.example.com {
+    reverse_proxy server:8000
+}

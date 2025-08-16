@@ -2,12 +2,13 @@
 FROM node:22 AS builder
 
 WORKDIR /app
-COPY . .
+COPY ./frontend .
 
 RUN npm install && npm run build
 
 # Final image to just copy to mounted volume (no CMD needed)
-FROM alpine:3.22
+FROM nginx:alpine
 
-WORKDIR /output
-COPY --from=builder /app/dist ./
+COPY ./config/frontend-nginx.conf /etc/nginx/conf.d/default.conf
+
+COPY --from=builder /app/dist /usr/share/nginx/html

@@ -1,0 +1,90 @@
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: multi_domain_server:latest
+    container_name: multi_domain_server
+    command: "uv run -m uvicorn app.main:app --workers 2 --host 0.0.0.0 --port 8000"
+    ports:
+      - 8000:8000
+    env_file: .env
+    volumes:
+      - ./:/code
+    depends_on:
+      - db
+    networks:
+      - multi_domain_tier
+
+  db:
+    image: mongo:8
+    restart: unless-stopped
+    container_name: multi_domain_db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 27017:27017
+    expose:
+      - 27017
+    volumes:
+      - multi_domain_db:/data/db
+    networks:
+      - multi_domain_tier
+
+  static_server:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    image: multi_domain_static:latest
+    container_name: multi_domain_static_server
+    env_file: ./frontend/.env
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    networks:
+      - multi_domain_tier
+
+  proxy_server:
+    build:
+      context: .
+      dockerfile: ./config/Dockerfile.caddy
+    image: multi_domain_proxy_server:latest
+    container_name: multi_domain_proxy_server
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - multi_domain_caddy_data:/data
+      - multi_domain_caddy_config:/config
+    env_file:
+      - .env.caddy
+    networks:
+      - multi_domain_tier
+
+volumes:
+  multi_domain_db:
+    external: true
+    name: multi_domain_db
+  multi_domain_caddy_data:
+    external: true
+    name: multi_domain_caddy_data
+  multi_domain_caddy_config:
+    driver: 'local'
+    name: multi_domain_caddy_config
+
+networks:
+  multi_domain_tier:
+    driver: bridge
+
+
+# docker volume create multi_domain_db caddy_data
+
+# export NAMECHEAP_API_USER="your_namecheap_username"
+# export NAMECHEAP_API_KEY="your_namecheap_api_key"
+# export NAMECHEAP_CLIENT_IP="your_client_ip"
