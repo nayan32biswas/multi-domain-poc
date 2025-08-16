@@ -66,6 +66,6 @@ For the subdomain DNS-01 challenge, we need to create some API Keys from the Nam
 - `docker volume create multi_domain_db` Create an external volume for the database
 - `docker volume create multi_domain_caddy_data` Create an external volume for the reverse proxy server
 - `docker compose -f docker-compose-prod.yml build server static_server proxy_server` Build the services.
-- `docker compose -f docker-compose-prod.yml up -d server static_server proxy_server` Start the services.
+- `docker compose -f docker-compose-prod.yml up -d --remove-orphans server static_server proxy_server` Start the services.
 
-Run this command `docker compose -f docker-compose-prod.yml up -d proxy_server` to start the proxy_server server. We need to restart this service if the configuration related to Caddy reverse proxy changes.
+Run this command `docker compose -f docker-compose-prod.yml up -d --remove-orphans proxy_server` to start the proxy_server server. We need to restart this service if the configuration related to Caddy reverse proxy changes.
