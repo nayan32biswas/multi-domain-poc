@@ -69,3 +69,5 @@ For the subdomain DNS-01 challenge, we need to create some API Keys from the Nam
 - `docker compose -f docker-compose-prod.yml up -d --remove-orphans server static_server proxy_server` Start the services.
 
 Run this command `docker compose -f docker-compose-prod.yml up -d --remove-orphans proxy_server` to start the proxy_server server. We need to restart this service if the configuration related to Caddy reverse proxy changes.
+
+Generally systems like this are deployed using a CI/CD pipeline. But to make the project simple, we manage everything manually. Since it's a POC project.

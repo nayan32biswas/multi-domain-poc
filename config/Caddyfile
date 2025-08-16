@@ -6,7 +6,7 @@
 
     on_demand_tls {
         # Check if custom domain is valid to serve.
-        ask https://customapi.neuwark.com/api/domain-check
+        ask https://api.example.com/api/domain-check
     }
 }
 

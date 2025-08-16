@@ -56,4 +56,6 @@ User the API `/api/projects/{project_id}/custom-domain/instructions` to get inst
 
 ## System Documentation
 
+### [Architecture](./docs/architecture.md)
+
 ### [Server Deployment](./docs/deployment.md)
