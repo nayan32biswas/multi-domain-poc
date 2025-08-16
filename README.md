@@ -7,6 +7,39 @@ This is a proof-of-concept project on how wildcard domains work. Additionally, w
 
 We can use the API to create a project. Each project will work like an independent app. Where each project will have a subdomain. With that subdomain, we can access our newly created project data. The subdomain will be abc.example.com. Also, we can integrate our custom domain with a project.
 
+## High Level Architecture
+
+```mermaid
+graph TB
+    %% External
+    User[👤 User]
+    DNS[🌐 DNS Provider]
+    
+    %% Core Services
+    Caddy[🔀 Caddy Reverse Proxy<br/>Automatic HTTPS & SSL]
+    API[🚀 API Server<br/>FastAPI]
+    Frontend[📁 Frontend<br/>React/Nginx]
+    DB[(🗄️ MongoDB)]
+
+    %% Traffic Flow
+    User -->|HTTPS| Caddy
+    DNS -.->|Domain Records| Caddy
+    
+    %% Service Routing
+    Caddy -->|api.example.com| API
+    Caddy -->|*.example.com<br/>custom domains| Frontend
+    
+    %% Data Flow
+    API --> DB
+
+    %% Styling
+    style User fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style API fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    style Frontend fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style DB fill:#F44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    style Caddy fill:#00BCD4,stroke:#0097A7,stroke-width:2px,color:#fff
+```
+
 ## Overall Project Structure
 
 For simplicity, we don't have any authentication, and security best practices are ignored. This is A POC project and not meant to be used in production directly. Most of the things we tried to keep simple.

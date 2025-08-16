@@ -1,6 +1,5 @@
 {
-    # Only for testing. Using letsencrypt staging server to avoid rate limits.
-    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory # Use Let's Encrypt Staging for testing to avoid rate limits
 
     email your@example.com
 
